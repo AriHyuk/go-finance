@@ -1,16 +1,15 @@
-# --- .gitignore ---
 
-# 1. Folder Database (WAJIB)
-pgdata/
-mysql_data/
 
-# 2. File Environment (RAHASIA)
+# Security
 .env
 
-# 3. File System / IDE
+# Database Data (Ignore isinya, tapi simpan folder via .gitkeep)
+pgdata/*
+!pgdata/.gitkeep
+
+# OS & Editor
 .DS_Store
 .vscode/
-.idea/
 
 # 4. Binary Go (Hasil Build)
 go-finance
