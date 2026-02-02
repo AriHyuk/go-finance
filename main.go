@@ -12,7 +12,7 @@ func main() {
 	dbHost := os.Getenv("DB_HOST")
 	port := os.Getenv("APP_PORT")
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Halo! Finance API Jalan.\nKoneksi ke Database host: %s", dbHost)
 	})
 
