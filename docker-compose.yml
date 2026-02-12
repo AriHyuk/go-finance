@@ -1,27 +1,34 @@
+version: '3.8'
+
 services:
   # --- Service 1: Aplikasi Golang Kita ---
   backend:
-    build: .                 # Dockerfile ada di folder ini (.)
+    build: .
+    container_name: go_backend_app # Biar nama containernya enak dibaca
     ports:
-      - "8080:8080"          # Laptop:Container
+      - "8080:8080"
     environment:
-      - APP_PORT=8080
-      - DB_HOST=db_finance   # NAMA SERVICE DB DI BAWAH (Penting!)
+      - APP_PORT=:8080
+      - DB_HOST=db_finance
+      - DB_PORT=5432                 # <--- TAMBAHAN: Wajib ada biar main.go gak bingung
       - DB_USER=${POSTGRES_USER}
-      - DB_PASS=${POSTGRES_PASSWORD}
+      - DB_PASSWORD=${POSTGRES_PASSWORD} # <--- KOREKSI: Harus "DB_PASSWORD", bukan "DB_PASS"
       - DB_NAME=${POSTGRES_DB}
     depends_on:
-      - db_finance           # Tunggu DB nyala dulu
+      - db_finance
 
   # --- Service 2: Database PostgreSQL ---
   db_finance:
     image: postgres:15-alpine
+    container_name: pg_db_finance
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5432:5432"          # Dibuka biar bisa dicek pake DBeaver/TablePlus
+      - "5432:5432"
     volumes:
-      - ./pgdata:/var/lib/postgresql/data  # BIAR DATA GAK ILANG PAS DI-RESTART
+      # Pake relative path (./pgdata) gapapa buat belajar.
+      # TAPI pastikan folder ini dimasukin ke .gitignore!
+      - ./pgdata:/var/lib/postgresql/data
