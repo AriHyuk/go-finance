@@ -13,4 +13,4 @@ pgdata/*
 
 # 4. Binary Go (Hasil Build)
 go-finance
-go-finance.exe
+go-finance.exetest_output.txt
