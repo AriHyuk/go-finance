@@ -13,4 +13,10 @@ pgdata/*
 
 # 4. Binary Go (Hasil Build)
 go-finance
-go-finance.exetest_output.txt
+go-finance.exe
+# Artifacts and Temporaries
+test_output.txt
+task-auth.md
+task-refactor.md
+task-refactor-auth.md
+.agent/
