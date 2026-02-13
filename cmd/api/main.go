@@ -1,28 +1,33 @@
 package main
 
 import (
-	"go-finance/pkg/database" // Ganti nama module sesuai go.mod kamu!
 	"fmt"
 	"log"
-	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"go-finance/internal/adapter/handler/rest"
+	"go-finance/internal/adapter/repository/postgres"
+	"go-finance/internal/core/service"
+	"go-finance/pkg/database"
+
 	"github.com/spf13/viper"
 )
 
 func main() {
-	// --- 1. SETUP CONFIG (VIPER) ---
+	// --- 1. LOAD CONFIGURATION ---
 	viper.SetConfigFile(".env")
-	viper.AutomaticEnv() // Baca juga dari environment variable (bagus buat Docker)
+	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
-		// Kalau di production kadang kita inject langsung env var tanpa file .env
-		// Jadi warning aja, jangan fatal
-		log.Println("Warning: Tidak bisa membaca file .env:", err)
+		log.Println("Warning: Cannot read .env file:", err)
 	}
 
-	// --- 2. SETUP DATABASE ---
-	// Rakit DSN (Data Source Name)
+	// Validate critical configuration (fail-fast)
+	jwtSecret := viper.GetString("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatal("❌ FATAL: JWT_SECRET is required")
+	}
+
+	// --- 2. CONNECT TO DATABASE ---
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
 		viper.GetString("DB_USER"),
 		viper.GetString("DB_PASSWORD"),
@@ -31,36 +36,27 @@ func main() {
 		viper.GetString("DB_NAME"),
 	)
 
-	// Panggil fungsi sakti yang kita buat di pkg/database
 	dbPool, err := database.NewPostgresConnection(dsn)
 	if err != nil {
-		log.Fatalf("❌ Fatal: Gagal konek database: %v", err) // Aplikasi matiin aja kalau DB gak konek
+		log.Fatalf("❌ Failed to connect to database: %v", err)
 	}
-	// Jangan lupa tutup koneksi kalau main program berhenti
 	defer dbPool.Close()
 
-	// --- 3. SETUP ROUTER (GIN) ---
-	r := gin.Default()
+	// --- 3. DEPENDENCY INJECTION (Clean Architecture Wiring) ---
+	userRepo := postgres.NewUserRepository(dbPool)
+	authService := service.NewAuthService(userRepo, jwtSecret)
+	authHandler := rest.NewAuthHandler(authService)
 
-	r.GET("/ping", func(c *gin.Context) {
-		// Kita coba cek status DB juga di endpoint ini
-		err := dbPool.Ping(c.Request.Context())
-		status := "Database OK"
-		if err != nil {
-			status = "Database Down: " + err.Error()
-		}
+	// --- 4. SETUP ROUTER & START SERVER ---
+	router := rest.NewRouter(authHandler, authService, dbPool)
 
-		c.JSON(http.StatusOK, gin.H{
-			"message": "day 1 belajar go-lang : adili jokowi",
-			"db_status": status,
-			"app_env": viper.GetString("APP_ENV"),
-		})
-	})
-
-	// --- 4. RUN SERVER ---
 	port := viper.GetString("APP_PORT")
-	log.Printf("🚀 Server berjalan di port %s", port)
-	if err := r.Run(port); err != nil {
-		log.Fatalf("Gagal menjalankan server: %v", err)
+	if port == "" || port[0] != ':' {
+		port = ":8080"
+	}
+
+	log.Printf("🚀 Server running on port %s", port)
+	if err := router.Run(port); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
 	}
 }
